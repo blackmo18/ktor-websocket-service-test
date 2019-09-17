@@ -1,3 +1,5 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package com.proto
 
 import io.ktor.http.cio.websocket.Frame
@@ -21,28 +23,16 @@ class SocketSessionService {
         while (checking) {
             delay(3000)
             liveSocket.forEach { (key, socket) ->
-                try {
-                    runBlocking {
-                        if ( !socket.outgoing.isClosedForSend) {
-                            println("socket is open")
-                            socket.send(Frame.Text("ping"))
-                        } else {
+                runCatching {
+                     if ( !socket.outgoing.isClosedForSend) {
+                        println("socket is open")
+                        socket.send(Frame.Text("ping"))
+                     } else {
                             println("socket closed for send")
-                            liveSocket.remove(key)
-                        }
+                        liveSocket.remove(key)
                     }
-                }
-                catch (e: ChannelWriteException) {
-                    println("socket exception: ${e.message}")
-                    liveSocket.remove(key)
-                }
-                catch (e: ClosedChannelException) {
-                    println("socket exception: ${e.message}")
-                    liveSocket.remove(key)
-                }
-                catch (e: Throwable) {
-                    println("socket error: ${e.message}")
-                    liveSocket.remove(key)
+                }.onFailure { exception ->
+                    println("failure: $exception")
                 }
             }
             println(liveSocket)
